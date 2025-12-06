@@ -1,6 +1,182 @@
 // Conexión con el servidor
 const socket = io();
 
+// ====== SISTEMA DE MÚSICA DE TENSIÓN ======
+class TensionMusic {
+  constructor() {
+    this.audioCtx = null;
+    this.isPlaying = false;
+    this.nodes = {};
+    this.tempo = 120;
+    this.currentBeat = 0;
+    this.intervalId = null;
+    this.tensionLevel = 1; // 1-3, aumenta cuando la zona se reduce
+  }
+
+  init() {
+    if (this.audioCtx) return;
+    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Nodo master de volumen
+    this.masterGain = this.audioCtx.createGain();
+    this.masterGain.gain.value = 0.3;
+    this.masterGain.connect(this.audioCtx.destination);
+  }
+
+  // Crear oscilador con envolvente
+  playNote(freq, duration, type = 'square', gainValue = 0.2, delay = 0) {
+    if (!this.audioCtx) return;
+
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.value = freq;
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    
+    const startTime = this.audioCtx.currentTime + delay;
+    
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainValue, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+    
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.1);
+  }
+
+  // Bajo pulsante (estilo 8-bit navideño oscuro)
+  playBass() {
+    const bassNotes = [
+      [65.41, 82.41, 73.42], // C2, E2, D2 - nivel 1
+      [61.74, 77.78, 69.30], // B1, Eb2, Db2 - nivel 2 (más tenso)
+      [58.27, 73.42, 65.41]  // Bb1, D2, C2 - nivel 3 (muy tenso)
+    ];
+    const notes = bassNotes[this.tensionLevel - 1];
+    const note = notes[this.currentBeat % notes.length];
+    this.playNote(note, 0.3, 'square', 0.25);
+  }
+
+  // Melodía de tensión
+  playMelody() {
+    const melodies = [
+      // Nivel 1 - Misterioso navideño
+      [392, 0, 330, 0, 349, 0, 294, 0], // G4, E4, F4, D4
+      // Nivel 2 - Más urgente
+      [415, 0, 349, 370, 311, 0, 330, 0], // Ab4, F4, Gb4, Eb4
+      // Nivel 3 - Muy tenso
+      [440, 415, 392, 370, 349, 330, 311, 294] // Escala descendente cromática
+    ];
+    
+    const melody = melodies[this.tensionLevel - 1];
+    const note = melody[this.currentBeat % melody.length];
+    
+    if (note > 0) {
+      this.playNote(note, 0.15, 'square', 0.12);
+      // Armonía
+      if (this.tensionLevel >= 2) {
+        this.playNote(note * 1.25, 0.15, 'triangle', 0.08); // Tercera mayor
+      }
+    }
+  }
+
+  // Arpegio de tensión (campanas siniestras)
+  playArpeggio() {
+    if (this.currentBeat % 2 !== 0) return;
+    
+    const arpeggios = [
+      [523, 659, 784], // C5, E5, G5
+      [554, 698, 831], // Db5, F5, Ab5
+      [523, 622, 784]  // C5, Eb5, G5 (menor)
+    ];
+    
+    const arp = arpeggios[this.tensionLevel - 1];
+    arp.forEach((note, i) => {
+      this.playNote(note, 0.2, 'triangle', 0.06, i * 0.08);
+    });
+  }
+
+  // Percusión 8-bit
+  playDrums() {
+    // Kick en beats 0 y 4
+    if (this.currentBeat % 4 === 0) {
+      this.playNote(60, 0.1, 'square', 0.3);
+      this.playNote(55, 0.15, 'square', 0.2);
+    }
+    
+    // Snare/hit en beats 2 y 6
+    if (this.currentBeat % 4 === 2) {
+      // Ruido simulado con múltiples frecuencias
+      [800, 1000, 1200].forEach(f => {
+        this.playNote(f, 0.05, 'square', 0.08);
+      });
+    }
+    
+    // Hi-hat más rápido en niveles altos
+    if (this.tensionLevel >= 2 || this.currentBeat % 2 === 0) {
+      this.playNote(1500, 0.02, 'square', 0.04);
+    }
+    
+    // Redoble en nivel 3
+    if (this.tensionLevel === 3 && this.currentBeat % 8 >= 6) {
+      this.playNote(200, 0.05, 'square', 0.15);
+    }
+  }
+
+  // Loop principal
+  tick() {
+    this.playBass();
+    this.playMelody();
+    this.playArpeggio();
+    this.playDrums();
+    
+    this.currentBeat = (this.currentBeat + 1) % 8;
+  }
+
+  start() {
+    if (this.isPlaying) return;
+    
+    this.init();
+    this.isPlaying = true;
+    
+    // Tempo basado en nivel de tensión
+    const getInterval = () => {
+      const baseTempo = 140 + (this.tensionLevel * 20);
+      return 60000 / baseTempo / 2;
+    };
+    
+    const scheduleNext = () => {
+      if (!this.isPlaying) return;
+      this.tick();
+      this.intervalId = setTimeout(scheduleNext, getInterval());
+    };
+    
+    scheduleNext();
+  }
+
+  stop() {
+    this.isPlaying = false;
+    if (this.intervalId) {
+      clearTimeout(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  setTensionLevel(level) {
+    this.tensionLevel = Math.max(1, Math.min(3, level));
+  }
+
+  setVolume(value) {
+    if (this.masterGain) {
+      this.masterGain.gain.value = Math.max(0, Math.min(1, value));
+    }
+  }
+}
+
+// Instancia global de música
+const tensionMusic = new TensionMusic();
+
 // Elementos del DOM
 const screens = {
   menu: document.getElementById('menu-screen'),
@@ -267,6 +443,7 @@ document.getElementById('btn-skip').addEventListener('click', () => {
 
 // Botón volver al menú
 document.getElementById('btn-menu').addEventListener('click', () => {
+  tensionMusic.stop();
   state = {
     playerId: null,
     gameId: null,
@@ -275,6 +452,31 @@ document.getElementById('btn-menu').addEventListener('click', () => {
     isMyTurn: false
   };
   showScreen('menu');
+});
+
+// Control de volumen
+document.getElementById('volume-slider').addEventListener('input', (e) => {
+  const volume = e.target.value / 100;
+  tensionMusic.setVolume(volume);
+  document.getElementById('btn-mute').textContent = volume === 0 ? '🔇' : '🔊';
+});
+
+// Botón mute
+let previousVolume = 0.3;
+document.getElementById('btn-mute').addEventListener('click', () => {
+  const slider = document.getElementById('volume-slider');
+  const btn = document.getElementById('btn-mute');
+  
+  if (parseFloat(slider.value) > 0) {
+    previousVolume = slider.value / 100;
+    slider.value = 0;
+    tensionMusic.setVolume(0);
+    btn.textContent = '🔇';
+  } else {
+    slider.value = previousVolume * 100;
+    tensionMusic.setVolume(previousVolume);
+    btn.textContent = '🔊';
+  }
 });
 
 // Teclas de dirección
@@ -360,6 +562,10 @@ socket.on('gameStarted', (gameState) => {
   showScreen('game');
   addEvent('¡La partida ha comenzado!');
   showNotification('¡Que empiece la batalla!', 2000);
+  
+  // Iniciar música de tensión
+  tensionMusic.setTensionLevel(1);
+  tensionMusic.start();
 });
 
 socket.on('turnStart', ({ playerId, playerName }) => {
@@ -414,18 +620,63 @@ socket.on('actionResult', (result) => {
 socket.on('zoneShrank', ({ freezeLevel }) => {
   addEvent(`❄️ ¡La zona se está congelando! Nivel: ${freezeLevel}`);
   showNotification('⚠️ ¡El hielo avanza!', 2000);
+  
+  // Aumentar tensión de la música según el nivel de congelamiento
+  const newTensionLevel = Math.min(3, 1 + Math.floor(freezeLevel / 2));
+  tensionMusic.setTensionLevel(newTensionLevel);
 });
 
 socket.on('gameOver', ({ winner }) => {
+  // Detener música de tensión
+  tensionMusic.stop();
+  
   elements.winnerName.textContent = winner;
   showScreen('gameover');
   
   if (state.gameState?.players[state.playerId]?.name === winner) {
     addEvent('🏆 ¡GANASTE!');
+    // Tocar melodía de victoria
+    playVictorySound();
   } else {
     addEvent(`🏆 ${winner} ganó la partida`);
   }
 });
+
+// Sonido de victoria
+function playVictorySound() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const masterGain = ctx.createGain();
+  masterGain.gain.value = 0.3;
+  masterGain.connect(ctx.destination);
+  
+  // Melodía navideña de victoria
+  const notes = [
+    { freq: 523, time: 0 },     // C5
+    { freq: 659, time: 0.15 },  // E5
+    { freq: 784, time: 0.3 },   // G5
+    { freq: 1047, time: 0.45 }, // C6
+    { freq: 784, time: 0.6 },   // G5
+    { freq: 1047, time: 0.75 }, // C6
+  ];
+  
+  notes.forEach(({ freq, time }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(masterGain);
+    
+    const startTime = ctx.currentTime + time;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.2, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+    
+    osc.start(startTime);
+    osc.stop(startTime + 0.25);
+  });
+}
 
 socket.on('error', (message) => {
   showNotification(`❌ ${message}`);

@@ -490,6 +490,64 @@ h1 {
   margin: 8px 0;
 }
 
+/* Controles de música */
+.music-controls {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+
+.music-controls h4 {
+  color: var(--gold);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.volume-control label {
+  font-size: 0.85rem;
+  color: var(--ice);
+}
+
+.volume-control input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  outline: none;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--gold);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-control input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--gold);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+#btn-mute {
+  width: 100%;
+  font-size: 1.2rem;
+}
+
 /* Log de eventos */
 .event-log {
   position: fixed;
