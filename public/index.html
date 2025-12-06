@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎄 Navidad Battle Royale</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Copos de nieve animados -->
+  <div class="snowflakes" aria-hidden="true">
+    <div class="snowflake">❄</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❄</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❄</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❄</div>
+  </div>
+
+  <!-- Pantalla de Menú -->
+  <div id="menu-screen" class="screen">
+    <div class="menu-container">
+      <h1>🎄 Navidad Battle Royale ❄️</h1>
+      <p class="subtitle">¡Sobrevive al frío y sé el último en pie!</p>
+      
+      <div class="input-group">
+        <label for="player-name">Tu nombre:</label>
+        <input type="text" id="player-name" placeholder="Santa Jr." maxlength="15">
+      </div>
+      
+      <div class="button-group">
+        <button id="btn-create" class="btn btn-primary">
+          🎁 Crear Partida
+        </button>
+        <button id="btn-join-toggle" class="btn btn-secondary">
+          🚪 Unirse a Partida
+        </button>
+      </div>
+      
+      <div id="join-section" class="hidden">
+        <div class="input-group">
+          <label for="game-code">Código de partida:</label>
+          <input type="text" id="game-code" placeholder="ABC123" maxlength="6">
+        </div>
+        <button id="btn-join" class="btn btn-primary">
+          ⛷️ Entrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de Lobby -->
+  <div id="lobby-screen" class="screen hidden">
+    <div class="lobby-container">
+      <h2>🎅 Sala de Espera</h2>
+      <div class="game-code-display">
+        <span>Código:</span>
+        <span id="lobby-code" class="code"></span>
+        <button id="btn-copy" class="btn-small">📋</button>
+      </div>
+      
+      <div class="players-list">
+        <h3>Jugadores:</h3>
+        <ul id="lobby-players"></ul>
+      </div>
+      
+      <p class="waiting-text">Esperando jugadores... (mín. 2)</p>
+      
+      <button id="btn-start" class="btn btn-primary hidden">
+        🎮 ¡Iniciar Partida!
+      </button>
+    </div>
+  </div>
+
+  <!-- Pantalla de Juego -->
+  <div id="game-screen" class="screen hidden">
+    <div class="game-layout">
+      <!-- Panel izquierdo: Info -->
+      <div class="game-panel left-panel">
+        <h3>🎄 Jugadores</h3>
+        <ul id="players-status"></ul>
+        
+        <div class="turn-info">
+          <p>Turno de:</p>
+          <p id="current-turn" class="highlight"></p>
+        </div>
+        
+        <div class="zone-warning" id="zone-warning">
+          <p>⚠️ Zona congelándose en:</p>
+          <p id="turns-until-freeze" class="highlight">3 turnos</p>
+        </div>
+      </div>
+      
+      <!-- Centro: Tablero -->
+      <div class="game-board-container">
+        <div id="game-board" class="game-board"></div>
+      </div>
+      
+      <!-- Panel derecho: Controles -->
+      <div class="game-panel right-panel">
+        <h3>🎮 Controles</h3>
+        
+        <div class="controls-section">
+          <p>Movimiento:</p>
+          <div class="movement-controls">
+            <button class="btn-move" data-dir="up">⬆️</button>
+            <div class="move-row">
+              <button class="btn-move" data-dir="left">⬅️</button>
+              <button class="btn-move" data-dir="right">➡️</button>
+            </div>
+            <button class="btn-move" data-dir="down">⬇️</button>
+          </div>
+        </div>
+        
+        <div class="controls-section">
+          <p>Ataque (selecciona enemigo):</p>
+          <button id="btn-attack" class="btn btn-attack" disabled>
+            ⚔️ Atacar
+          </button>
+        </div>
+        
+        <div class="controls-section">
+          <button id="btn-skip" class="btn btn-secondary">
+            ⏭️ Pasar Turno
+          </button>
+        </div>
+        
+        <div class="my-status">
+          <h4>Tu Estado:</h4>
+          <p>❤️ Vida: <span id="my-health">100</span></p>
+          <p>🛡️ Escudo: <span id="my-shield">No</span></p>
+          <p>⚡ Doble Ataque: <span id="my-double">No</span></p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Log de eventos -->
+    <div class="event-log">
+      <ul id="event-list"></ul>
+    </div>
+  </div>
+
+  <!-- Pantalla de Game Over -->
+  <div id="gameover-screen" class="screen hidden">
+    <div class="gameover-container">
+      <h2>🏆 ¡Fin del Juego!</h2>
+      <p class="winner-text">Ganador:</p>
+      <p id="winner-name" class="winner-name"></p>
+      <div class="confetti">🎊🎉🎊🎉🎊</div>
+      <button id="btn-menu" class="btn btn-primary">
+        🏠 Volver al Menú
+      </button>
+    </div>
+  </div>
+
+  <!-- Notificaciones -->
+  <div id="notification" class="notification hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
