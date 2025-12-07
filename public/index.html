@@ -32,6 +32,21 @@
         <input type="text" id="player-name" placeholder="Santa Jr." maxlength="15">
       </div>
       
+      <div class="input-group">
+        <label>Escoge tu avatar:</label>
+        <div class="avatar-selector">
+          <button class="avatar-option selected" data-avatar="🎅">🎅</button>
+          <button class="avatar-option" data-avatar="🤶">🤶</button>
+          <button class="avatar-option" data-avatar="⛄">⛄</button>
+          <button class="avatar-option" data-avatar="🦌">🦌</button>
+          <button class="avatar-option" data-avatar="🧝">🧝</button>
+          <button class="avatar-option" data-avatar="🎄">🎄</button>
+          <button class="avatar-option" data-avatar="🐧">🐧</button>
+          <button class="avatar-option" data-avatar="☃️">☃️</button>
+          <button class="avatar-option" data-avatar="🎁">🎁</button>
+        </div>
+      </div>
+      
       <div class="button-group">
         <button id="btn-create" class="btn btn-primary">
           🎁 Crear Partida
@@ -50,6 +65,50 @@
           ⛷️ Entrar
         </button>
       </div>
+      
+      <button id="btn-instructions" class="btn btn-help">❓ Cómo Jugar</button>
+    </div>
+  </div>
+
+  <!-- Modal de Instrucciones -->
+  <div id="instructions-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>📖 Cómo Jugar</h2>
+      
+      <div class="instruction-section">
+        <h3>🎯 Objetivo</h3>
+        <p>Sé el último jugador en pie. Elimina a tus oponentes y evita el hielo.</p>
+      </div>
+      
+      <div class="instruction-section">
+        <h3>🎮 Controles</h3>
+        <p><strong>PC:</strong> Usa las flechas ⬆️⬇️⬅️➡️ o WASD para moverte</p>
+        <p><strong>Móvil:</strong> Desliza el dedo en la dirección que quieras ir, o usa los botones en pantalla</p>
+        <p><strong>Atacar:</strong> Toca a un enemigo cercano (máximo 2 casillas) y presiona "Atacar"</p>
+      </div>
+      
+      <div class="instruction-section">
+        <h3>⚔️ Combate</h3>
+        <p>• Cada ataque hace <strong>25 de daño</strong></p>
+        <p>• Todos empiezan con <strong>100 de vida</strong></p>
+        <p>• Solo puedes atacar enemigos a <strong>2 casillas o menos</strong></p>
+      </div>
+      
+      <div class="instruction-section">
+        <h3>🎁 Regalos (Power-ups)</h3>
+        <p>• 💚 <strong>Curación:</strong> Recupera 20 HP</p>
+        <p>• 🛡️ <strong>Escudo:</strong> Reduce el próximo daño a la mitad</p>
+        <p>• ⚡ <strong>Doble Ataque:</strong> Tu siguiente ataque hace 50 de daño</p>
+      </div>
+      
+      <div class="instruction-section">
+        <h3>❄️ Zona de Hielo</h3>
+        <p>Cada <strong>3 turnos</strong> el borde del mapa se congela.</p>
+        <p>¡Estar en el hielo te quita <strong>15 HP por turno</strong>!</p>
+        <p>El área segura se reduce con el tiempo. ¡Mantente en el centro!</p>
+      </div>
+      
+      <button id="btn-close-instructions" class="btn btn-primary">¡Entendido!</button>
     </div>
   </div>
 
@@ -63,8 +122,14 @@
         <button id="btn-copy" class="btn-small">📋</button>
       </div>
       
+      <div class="my-avatar-display">
+        <p>Tu personaje:</p>
+        <span id="my-avatar-big" class="avatar-big">🎅</span>
+        <span id="my-name-display" class="my-name"></span>
+      </div>
+      
       <div class="players-list">
-        <h3>Jugadores:</h3>
+        <h3>Jugadores en sala:</h3>
         <ul id="lobby-players"></ul>
       </div>
       
@@ -73,6 +138,8 @@
       <button id="btn-start" class="btn btn-primary hidden">
         🎮 ¡Iniciar Partida!
       </button>
+      
+      <button id="btn-instructions-lobby" class="btn btn-help">❓ Cómo Jugar</button>
     </div>
   </div>
 
@@ -81,6 +148,11 @@
     <div class="game-layout">
       <!-- Panel izquierdo: Info -->
       <div class="game-panel left-panel">
+        <div class="my-character-indicator">
+          <span id="game-my-avatar" class="avatar-medium">🎅</span>
+          <span id="game-my-name" class="my-name-small">Tú</span>
+        </div>
+        
         <h3>🎄 Jugadores</h3>
         <ul id="players-status"></ul>
         
@@ -95,9 +167,10 @@
         </div>
       </div>
       
-      <!-- Centro: Tablero -->
+      <!-- Centro: Tablero con área táctil -->
       <div class="game-board-container">
         <div id="game-board" class="game-board"></div>
+        <div id="touch-overlay" class="touch-overlay"></div>
       </div>
       
       <!-- Panel derecho: Controles -->
@@ -114,13 +187,15 @@
             </div>
             <button class="btn-move" data-dir="down">⬇️</button>
           </div>
+          <p class="control-hint">💡 También: flechas, WASD o desliza</p>
         </div>
         
         <div class="controls-section">
-          <p>Ataque (selecciona enemigo):</p>
+          <p>Ataque (toca un enemigo cercano):</p>
           <button id="btn-attack" class="btn btn-attack" disabled>
             ⚔️ Atacar
           </button>
+          <p id="attack-target-hint" class="control-hint">Selecciona un objetivo</p>
         </div>
         
         <div class="controls-section">
@@ -144,6 +219,8 @@
           </div>
           <button id="btn-mute" class="btn-small">🔊</button>
         </div>
+        
+        <button id="btn-instructions-game" class="btn-small btn-help-small">❓ Ayuda</button>
       </div>
     </div>
     

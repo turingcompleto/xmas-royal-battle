@@ -211,11 +211,17 @@ let state = {
   gameId: null,
   gameState: null,
   selectedTarget: null,
-  isMyTurn: false
+  isMyTurn: false,
+  selectedAvatar: '🎅'
 };
 
-// Emojis para jugadores
-const playerEmojis = ['🎅', '🤶', '⛄', '🦌', '🧝', '🎄'];
+// Guardar mapeo de avatares de jugadores
+let playerAvatars = {};
+
+// Obtener avatar de un jugador
+function getPlayerAvatar(playerId) {
+  return playerAvatars[playerId] || '🎅';
+}
 
 // Mostrar pantalla
 function showScreen(screenName) {
@@ -249,8 +255,6 @@ function renderBoard(gameState) {
   elements.gameBoard.innerHTML = '';
   
   const players = Object.values(gameState.players);
-  const playerIndex = {};
-  players.forEach((p, i) => playerIndex[p.id] = i);
   
   for (let y = 0; y < gameState.board.length; y++) {
     for (let x = 0; x < gameState.board[y].length; x++) {
@@ -269,8 +273,8 @@ function renderBoard(gameState) {
         cell.innerHTML = '❄️';
       } else if (playerHere) {
         cell.classList.add('has-player');
-        const emoji = playerEmojis[playerIndex[playerHere.id] % playerEmojis.length];
-        cell.innerHTML = `<span class="player-marker">${emoji}</span>`;
+        const avatar = getPlayerAvatar(playerHere.id);
+        cell.innerHTML = `<span class="player-marker">${avatar}</span>`;
         
         if (playerHere.id === state.playerId) {
           cell.classList.add('my-cell');
@@ -302,6 +306,13 @@ function selectTarget(player) {
   state.selectedTarget = player;
   elements.btnAttack.disabled = false;
   
+  // Actualizar hint de ataque
+  const attackHint = document.getElementById('attack-target-hint');
+  if (attackHint) {
+    attackHint.textContent = `Objetivo: ${player.name}`;
+    attackHint.style.color = '#ff6b6b';
+  }
+  
   // Actualizar UI
   document.querySelectorAll('#players-status li').forEach(li => {
     li.classList.remove('selected');
@@ -319,15 +330,16 @@ function renderPlayers(gameState) {
   
   const players = Object.values(gameState.players);
   
-  players.forEach((player, index) => {
+  players.forEach((player) => {
     const li = document.createElement('li');
     li.dataset.playerId = player.id;
     
-    const emoji = playerEmojis[index % playerEmojis.length];
+    const avatar = getPlayerAvatar(player.id);
     const healthPercent = (player.health / 100) * 100;
+    const isMe = player.id === state.playerId;
     
     li.innerHTML = `
-      <span>${emoji} ${player.name}</span>
+      <span>${avatar} ${player.name}${isMe ? ' (Tú)' : ''}</span>
       ${player.hasShield ? '🛡️' : ''}
       ${player.hasDoubleAttack ? '⚡' : ''}
       <div class="health-bar">
@@ -339,12 +351,12 @@ function renderPlayers(gameState) {
       li.classList.add('dead');
     }
     
-    if (player.id === state.playerId && state.isMyTurn) {
+    if (isMe && state.isMyTurn) {
       li.classList.add('current-player');
     }
     
     // Click para seleccionar objetivo
-    if (player.id !== state.playerId && player.alive && state.isMyTurn) {
+    if (!isMe && player.alive && state.isMyTurn) {
       li.style.cursor = 'pointer';
       li.onclick = () => {
         if (canAttack(player)) {
@@ -357,6 +369,17 @@ function renderPlayers(gameState) {
     
     elements.playersStatus.appendChild(li);
   });
+  
+  // Actualizar mi indicador de personaje
+  const myAvatarEl = document.getElementById('game-my-avatar');
+  const myNameEl = document.getElementById('game-my-name');
+  if (myAvatarEl && state.playerId) {
+    myAvatarEl.textContent = getPlayerAvatar(state.playerId);
+    const me = gameState.players[state.playerId];
+    if (me) {
+      myNameEl.textContent = me.name;
+    }
+  }
 }
 
 // Actualizar mi estado
@@ -384,10 +407,43 @@ function setControlsEnabled(enabled) {
 
 // --- Event Listeners del DOM ---
 
+// Selector de avatar
+document.querySelectorAll('.avatar-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.selectedAvatar = btn.dataset.avatar;
+  });
+});
+
+// Modal de instrucciones
+document.getElementById('btn-instructions').addEventListener('click', () => {
+  document.getElementById('instructions-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-instructions-lobby')?.addEventListener('click', () => {
+  document.getElementById('instructions-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-instructions-game')?.addEventListener('click', () => {
+  document.getElementById('instructions-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-close-instructions').addEventListener('click', () => {
+  document.getElementById('instructions-modal').classList.add('hidden');
+});
+
+// Cerrar modal con click afuera
+document.getElementById('instructions-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'instructions-modal') {
+    document.getElementById('instructions-modal').classList.add('hidden');
+  }
+});
+
 // Botón crear partida
 document.getElementById('btn-create').addEventListener('click', () => {
   const name = elements.playerName.value.trim() || 'Jugador';
-  socket.emit('createGame', name);
+  socket.emit('createGame', { playerName: name, avatar: state.selectedAvatar });
 });
 
 // Toggle sección unirse
@@ -405,7 +461,7 @@ document.getElementById('btn-join').addEventListener('click', () => {
     return;
   }
   
-  socket.emit('joinGame', { gameId, playerName: name });
+  socket.emit('joinGame', { gameId, playerName: name, avatar: state.selectedAvatar });
 });
 
 // Botón copiar código
@@ -444,13 +500,18 @@ document.getElementById('btn-skip').addEventListener('click', () => {
 // Botón volver al menú
 document.getElementById('btn-menu').addEventListener('click', () => {
   tensionMusic.stop();
+  playerAvatars = {};
   state = {
     playerId: null,
     gameId: null,
     gameState: null,
     selectedTarget: null,
-    isMyTurn: false
+    isMyTurn: false,
+    selectedAvatar: '🎅'
   };
+  // Resetear selector de avatar
+  document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.avatar-option[data-avatar="🎅"]').classList.add('selected');
   showScreen('menu');
 });
 
@@ -500,13 +561,68 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// --- Controles Táctiles (Swipe) ---
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+const MIN_SWIPE_DISTANCE = 30;
+const MAX_SWIPE_TIME = 500;
+
+document.getElementById('game-board').addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+}, { passive: true });
+
+document.getElementById('game-board').addEventListener('touchend', (e) => {
+  if (!state.isMyTurn) return;
+  
+  const touchEndX = e.changedTouches[0].clientX;
+  const touchEndY = e.changedTouches[0].clientY;
+  const touchEndTime = Date.now();
+  
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+  const deltaTime = touchEndTime - touchStartTime;
+  
+  // Verificar que sea un swipe válido
+  if (deltaTime > MAX_SWIPE_TIME) return;
+  
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  
+  if (absX < MIN_SWIPE_DISTANCE && absY < MIN_SWIPE_DISTANCE) return;
+  
+  let direction;
+  if (absX > absY) {
+    direction = deltaX > 0 ? 'right' : 'left';
+  } else {
+    direction = deltaY > 0 ? 'down' : 'up';
+  }
+  
+  socket.emit('action', { type: 'move', direction });
+  showNotification(`Moviendo ${direction === 'up' ? '⬆️' : direction === 'down' ? '⬇️' : direction === 'left' ? '⬅️' : '➡️'}`, 500);
+}, { passive: true });
+
+// Prevenir scroll en el tablero en móvil
+document.getElementById('game-board').addEventListener('touchmove', (e) => {
+  e.preventDefault();
+}, { passive: false });
+
 // --- Socket Events ---
 
 socket.on('gameCreated', ({ gameId, playerId }) => {
   state.gameId = gameId;
   state.playerId = playerId;
+  playerAvatars[playerId] = state.selectedAvatar;
+  
   elements.lobbyCode.textContent = gameId;
   elements.btnStart.classList.remove('hidden');
+  
+  // Mostrar mi avatar en el lobby
+  document.getElementById('my-avatar-big').textContent = state.selectedAvatar;
+  document.getElementById('my-name-display').textContent = elements.playerName.value.trim() || 'Jugador';
+  
   showScreen('lobby');
   showNotification('¡Partida creada! Comparte el código');
 });
@@ -514,8 +630,15 @@ socket.on('gameCreated', ({ gameId, playerId }) => {
 socket.on('joinedGame', ({ gameId, playerId }) => {
   state.gameId = gameId;
   state.playerId = playerId;
+  playerAvatars[playerId] = state.selectedAvatar;
+  
   elements.lobbyCode.textContent = gameId;
   elements.btnStart.classList.add('hidden');
+  
+  // Mostrar mi avatar en el lobby
+  document.getElementById('my-avatar-big').textContent = state.selectedAvatar;
+  document.getElementById('my-name-display').textContent = elements.playerName.value.trim() || 'Jugador';
+  
   showScreen('lobby');
   showNotification('¡Te uniste a la partida!');
 });
@@ -523,12 +646,21 @@ socket.on('joinedGame', ({ gameId, playerId }) => {
 socket.on('gameState', (gameState) => {
   state.gameState = gameState;
   
+  // Guardar avatares de todos los jugadores
+  Object.values(gameState.players).forEach(player => {
+    if (player.avatar && !playerAvatars[player.id]) {
+      playerAvatars[player.id] = player.avatar;
+    }
+  });
+  
   // Actualizar lobby
   if (!gameState.started) {
     elements.lobbyPlayers.innerHTML = '';
-    Object.values(gameState.players).forEach((player, index) => {
+    Object.values(gameState.players).forEach((player) => {
       const li = document.createElement('li');
-      li.textContent = `${playerEmojis[index]} ${player.name}`;
+      const avatar = playerAvatars[player.id] || player.avatar || '🎅';
+      const isMe = player.id === state.playerId;
+      li.innerHTML = `<span>${avatar}</span> ${player.name}${isMe ? ' <small>(Tú)</small>' : ''}`;
       if (player.isHost) li.classList.add('host');
       elements.lobbyPlayers.appendChild(li);
     });

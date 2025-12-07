@@ -115,7 +115,7 @@ io.on('connection', (socket) => {
   console.log('Jugador conectado:', socket.id);
   
   // Crear partida
-  socket.on('createGame', (playerName) => {
+  socket.on('createGame', ({ playerName, avatar }) => {
     const gameId = generateGameId();
     const position = getStartPosition(createBoard(), []);
     
@@ -126,6 +126,7 @@ io.on('connection', (socket) => {
         [socket.id]: {
           id: socket.id,
           name: playerName || 'Jugador',
+          avatar: avatar || '🎅',
           x: position.x,
           y: position.y,
           health: CONFIG.INITIAL_HEALTH,
@@ -149,7 +150,7 @@ io.on('connection', (socket) => {
   });
   
   // Unirse a partida
-  socket.on('joinGame', ({ gameId, playerName }) => {
+  socket.on('joinGame', ({ gameId, playerName, avatar }) => {
     const game = games[gameId];
     
     if (!game) {
@@ -173,6 +174,7 @@ io.on('connection', (socket) => {
     game.players[socket.id] = {
       id: socket.id,
       name: playerName || 'Jugador',
+      avatar: avatar || '🎅',
       x: position.x,
       y: position.y,
       health: CONFIG.INITIAL_HEALTH,
@@ -188,7 +190,7 @@ io.on('connection', (socket) => {
     socket.gameId = gameId;
     socket.emit('joinedGame', { gameId, playerId: socket.id });
     io.to(gameId).emit('gameState', game);
-    io.to(gameId).emit('playerJoined', { playerName: playerName || 'Jugador' });
+    io.to(gameId).emit('playerJoined', { playerName: playerName || 'Jugador', avatar: avatar || '🎅' });
   });
   
   // Iniciar partida
